@@ -17,6 +17,8 @@ class PrayerTimes {
   DateTime? isha;
   DateTime? ishabefore;
   DateTime? fajrafter;
+  DateTime? sunset;
+  DateTime? middleofnight;
 
   // TODO: added precision
   // rounded nightfraction
@@ -38,41 +40,44 @@ class PrayerTimes {
     SolarTime solarTimeBefore = SolarTime(dateBefore, coordinates);
     SolarTime solarTimeAfter = SolarTime(dateAfter, coordinates);
 
+    DateTime tomorrowFajrTime;
     DateTime fajrTime;
     DateTime asrTime;
     DateTime maghribTime;
     DateTime ishaTime;
     DateTime ishabeforeTime;
     DateTime fajrafterTime;
+    DateTime middleofnightTime;
 
     double? nightFraction;
 
     DateTime dhuhrTime = TimeComponents(solarTime.transit).utcDate(date.year, date.month, date.day);
-    DateTime sunriseTime =
-        TimeComponents(solarTime.sunrise).utcDate(date.year, date.month, date.day);
+    DateTime sunriseTime = TimeComponents(solarTime.sunrise).utcDate(date.year, date.month, date.day);
     DateTime sunsetTime = TimeComponents(solarTime.sunset).utcDate(date.year, date.month, date.day);
 
-    DateTime sunriseafterTime = TimeComponents(solarTimeAfter.sunrise)
-        .utcDate(dateAfter.year, dateAfter.month, dateAfter.day);
-    DateTime sunsetbeforeTime = TimeComponents(solarTimeBefore.sunset)
-        .utcDate(dateBefore.year, dateBefore.month, dateBefore.day);
+    DateTime sunriseafterTime = TimeComponents(solarTimeAfter.sunrise).utcDate(dateAfter.year, dateAfter.month, dateAfter.day);
+    DateTime sunsetbeforeTime = TimeComponents(solarTimeBefore.sunset).utcDate(dateBefore.year, dateBefore.month, dateBefore.day);
 
-    asrTime = TimeComponents(solarTime.afternoon(shadowLength(calculationParameters.madhab)))
-        .utcDate(date.year, date.month, date.day);
+    asrTime = TimeComponents(solarTime.afternoon(shadowLength(calculationParameters.madhab))).utcDate(date.year, date.month, date.day);
 
     DateTime tomorrow = dateByAddingDays(date, 1);
     var tomorrowSolarTime = SolarTime(tomorrow, coordinates);
-    DateTime tomorrowSunrise = TimeComponents(tomorrowSolarTime.sunrise)
-        .utcDate(tomorrow.year, tomorrow.month, tomorrow.day);
+    DateTime tomorrowSunrise = TimeComponents(tomorrowSolarTime.sunrise).utcDate(tomorrow.year, tomorrow.month, tomorrow.day);
     // var night = (tomorrowSunrise - sunsetTime) / 1000;
     int night = (tomorrowSunrise.difference(sunsetTime)).inSeconds;
 
-    fajrTime = TimeComponents(solarTime.hourAngle(-1 * calculationParameters.fajrAngle, false))
-        .utcDate(date.year, date.month, date.day);
+    fajrTime = TimeComponents(solarTime.hourAngle(-1 * calculationParameters.fajrAngle, false)).utcDate(date.year, date.month, date.day);
+
+    tomorrowFajrTime =
+        TimeComponents(tomorrowSolarTime.hourAngle(-1 * calculationParameters.fajrAngle, false)).utcDate(tomorrow.year, tomorrow.month, tomorrow.day);
+
+    print(sunsetTime);
+    print(tomorrowFajrTime);
+    print(sunsetTime.difference(tomorrowFajrTime).inSeconds ~/ 2);
+    middleofnightTime = sunsetTime.add(Duration(seconds: (sunsetTime.difference(tomorrowFajrTime).inSeconds ~/ 2).abs()));
 
     fajrafterTime =
-        TimeComponents(solarTimeAfter.hourAngle(-1 * calculationParameters.fajrAngle, false))
-            .utcDate(dateAfter.year, dateAfter.month, dateAfter.day);
+        TimeComponents(solarTimeAfter.hourAngle(-1 * calculationParameters.fajrAngle, false)).utcDate(dateAfter.year, dateAfter.month, dateAfter.day);
 
     // special case for moonsighting committee above latitude 55
     if (calculationParameters.method == 'MoonsightingCommittee' && coordinates.latitude >= 55) {
@@ -83,8 +88,7 @@ class PrayerTimes {
 
     DateTime safeFajr() {
       if (calculationParameters.method == 'MoonsightingCommittee') {
-        return Astronomical.seasonAdjustedMorningTwilight(
-            coordinates.latitude, dayOfYear(date), date.year, sunriseTime);
+        return Astronomical.seasonAdjustedMorningTwilight(coordinates.latitude, dayOfYear(date), date.year, sunriseTime);
       } else {
         var portion = calculationParameters.nightPortions()['fajr'];
         nightFraction = portion * night;
@@ -116,11 +120,9 @@ class PrayerTimes {
       ishaTime = dateByAddingMinutes(sunsetTime, calculationParameters.ishaInterval);
       ishabeforeTime = dateByAddingMinutes(sunsetbeforeTime, calculationParameters.ishaInterval);
     } else {
-      ishaTime = TimeComponents(solarTime.hourAngle(-1 * calculationParameters.ishaAngle, true))
-          .utcDate(date.year, date.month, date.day);
+      ishaTime = TimeComponents(solarTime.hourAngle(-1 * calculationParameters.ishaAngle, true)).utcDate(date.year, date.month, date.day);
       ishabeforeTime =
-          TimeComponents(solarTimeBefore.hourAngle(-1 * calculationParameters.ishaAngle, true))
-              .utcDate(dateBefore.year, dateBefore.month, dateBefore.day);
+          TimeComponents(solarTimeBefore.hourAngle(-1 * calculationParameters.ishaAngle, true)).utcDate(dateBefore.year, dateBefore.month, dateBefore.day);
       // special case for moonsighting committee above latitude 55
       if (calculationParameters.method == 'MoonsightingCommittee' && coordinates.latitude >= 55) {
         nightFraction = night / 7;
@@ -130,8 +132,7 @@ class PrayerTimes {
 
       DateTime safeIsha() {
         if (calculationParameters.method == 'MoonsightingCommittee') {
-          return Astronomical.seasonAdjustedEveningTwilight(
-              coordinates.latitude, dayOfYear(date), date.year, sunsetTime);
+          return Astronomical.seasonAdjustedEveningTwilight(coordinates.latitude, dayOfYear(date), date.year, sunsetTime);
         } else {
           var portion = calculationParameters.nightPortions()['isha'];
           nightFraction = portion * night;
@@ -141,8 +142,7 @@ class PrayerTimes {
 
       DateTime safeIshaBefore() {
         if (calculationParameters.method == 'MoonsightingCommittee') {
-          return Astronomical.seasonAdjustedEveningTwilight(
-              coordinates.latitude, dayOfYear(date), date.year, sunsetTime);
+          return Astronomical.seasonAdjustedEveningTwilight(coordinates.latitude, dayOfYear(date), date.year, sunsetTime);
         } else {
           var portion = calculationParameters.nightPortions()['isha'];
           nightFraction = portion * night;
@@ -154,49 +154,38 @@ class PrayerTimes {
         ishaTime = safeIsha();
       }
 
-      if (ishabeforeTime.millisecondsSinceEpoch.isNaN ||
-          safeIshaBefore().isBefore(ishabeforeTime)) {
+      if (ishabeforeTime.millisecondsSinceEpoch.isNaN || safeIshaBefore().isBefore(ishabeforeTime)) {
         ishabeforeTime = safeIshaBefore();
       }
     }
 
     maghribTime = sunsetTime;
     if (calculationParameters.maghribAngle != null) {
-      DateTime angleBasedMaghrib =
-          TimeComponents(solarTime.hourAngle(-1 * calculationParameters.maghribAngle!, true))
-              .utcDate(date.year, date.month, date.day);
+      DateTime angleBasedMaghrib = TimeComponents(solarTime.hourAngle(-1 * calculationParameters.maghribAngle!, true)).utcDate(date.year, date.month, date.day);
       if (sunsetTime.isBefore(angleBasedMaghrib) && ishaTime.isAfter(angleBasedMaghrib)) {
         maghribTime = angleBasedMaghrib;
       }
     }
 
     // double fajrAdjustment = (calculationParameters.adjustments["fajr"] && 0) + (calculationParameters.methodAdjustments["fajr"] && 0);
-    int fajrAdjustment = (calculationParameters.adjustments['fajr'] ?? 0) +
-        (calculationParameters.methodAdjustments['fajr'] ?? 0);
-    int sunriseAdjustment = (calculationParameters.adjustments['sunrise'] ?? 0) +
-        (calculationParameters.methodAdjustments['sunrise'] ?? 0);
-    int dhuhrAdjustment = (calculationParameters.adjustments['dhuhr'] ?? 0) +
-        (calculationParameters.methodAdjustments['dhuhr'] ?? 0);
-    int asrAdjustment = (calculationParameters.adjustments['asr'] ?? 0) +
-        (calculationParameters.methodAdjustments['asr'] ?? 0);
-    int maghribAdjustment = (calculationParameters.adjustments['maghrib'] ?? 0) +
-        (calculationParameters.methodAdjustments['maghrib'] ?? 0);
-    int ishaAdjustment = (calculationParameters.adjustments['isha'] ?? 0) +
-        (calculationParameters.methodAdjustments['isha'] ?? 0);
+    int fajrAdjustment = (calculationParameters.adjustments['fajr'] ?? 0) + (calculationParameters.methodAdjustments['fajr'] ?? 0);
+    int sunriseAdjustment = (calculationParameters.adjustments['sunrise'] ?? 0) + (calculationParameters.methodAdjustments['sunrise'] ?? 0);
+    int dhuhrAdjustment = (calculationParameters.adjustments['dhuhr'] ?? 0) + (calculationParameters.methodAdjustments['dhuhr'] ?? 0);
+    int asrAdjustment = (calculationParameters.adjustments['asr'] ?? 0) + (calculationParameters.methodAdjustments['asr'] ?? 0);
+    int maghribAdjustment = (calculationParameters.adjustments['maghrib'] ?? 0) + (calculationParameters.methodAdjustments['maghrib'] ?? 0);
+    int ishaAdjustment = (calculationParameters.adjustments['isha'] ?? 0) + (calculationParameters.methodAdjustments['isha'] ?? 0);
 
     fajr = roundedMinute(dateByAddingMinutes(fajrTime, fajrAdjustment), precision: precision);
-    sunrise =
-        roundedMinute(dateByAddingMinutes(sunriseTime, sunriseAdjustment), precision: precision);
+    sunrise = roundedMinute(dateByAddingMinutes(sunriseTime, sunriseAdjustment), precision: precision);
     dhuhr = roundedMinute(dateByAddingMinutes(dhuhrTime, dhuhrAdjustment), precision: precision);
     asr = roundedMinute(dateByAddingMinutes(asrTime, asrAdjustment), precision: precision);
-    maghrib =
-        roundedMinute(dateByAddingMinutes(maghribTime, maghribAdjustment), precision: precision);
+    maghrib = roundedMinute(dateByAddingMinutes(maghribTime, maghribAdjustment), precision: precision);
     isha = roundedMinute(dateByAddingMinutes(ishaTime, ishaAdjustment), precision: precision);
 
-    fajrafter =
-        roundedMinute(dateByAddingMinutes(fajrafterTime, fajrAdjustment), precision: precision);
-    ishabefore =
-        roundedMinute(dateByAddingMinutes(ishabeforeTime, ishaAdjustment), precision: precision);
+    fajrafter = roundedMinute(dateByAddingMinutes(fajrafterTime, fajrAdjustment), precision: precision);
+    ishabefore = roundedMinute(dateByAddingMinutes(ishabeforeTime, ishaAdjustment), precision: precision);
+    sunset = roundedMinute(dateByAddingMinutes(sunsetTime, sunriseAdjustment), precision: precision);
+    middleofnight = roundedMinute(middleofnightTime, precision: precision);
   }
 
   DateTime? timeForPrayer(String prayer) {
