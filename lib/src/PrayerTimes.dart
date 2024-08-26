@@ -71,9 +71,6 @@ class PrayerTimes {
     tomorrowFajrTime =
         TimeComponents(tomorrowSolarTime.hourAngle(-1 * calculationParameters.fajrAngle, false)).utcDate(tomorrow.year, tomorrow.month, tomorrow.day);
 
-    print(sunsetTime);
-    print(tomorrowFajrTime);
-    print(sunsetTime.difference(tomorrowFajrTime).inSeconds ~/ 2);
     middleofnightTime = sunsetTime.add(Duration(seconds: (sunsetTime.difference(tomorrowFajrTime).inSeconds ~/ 2).abs()));
 
     fajrafterTime =
